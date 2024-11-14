@@ -75,7 +75,8 @@ function Preferences(props) {
       if (response.ok) {
         const data = await response.json();
         if (data && Object.keys(data).length > 0) {
-          setAvailability(data.availability || defaultAvailability);
+          const availabilityData = typeof data.availability === 'string' ? JSON.parse(data.availability) : data.availability;
+          setAvailability(availabilityData || defaultAvailability);
           setSessionDuration(data.session_duration || 60);
           setStartDate(data.start_date ? format(new Date(data.start_date), 'yyyy-MM-dd') : '');
           props.setPreferencesSet(true);
@@ -94,7 +95,7 @@ function Preferences(props) {
   };
 
   createEffect(() => {
-    if (props.isOpen) {
+    if (props.isOpen || props.isOpen === undefined) {
       fetchPreferences();
     }
   });

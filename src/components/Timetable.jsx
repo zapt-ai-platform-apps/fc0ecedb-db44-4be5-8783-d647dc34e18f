@@ -47,7 +47,8 @@ function Timetable(props) {
         return;
       }
 
-      const availability = preferences.availability;
+      const availability = typeof preferences.availability === 'string' ? JSON.parse(preferences.availability) : preferences.availability;
+
       const sessionDuration = preferences.session_duration;
       const startDate = parseISO(preferences.start_date);
 
