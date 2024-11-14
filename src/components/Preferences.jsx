@@ -1,4 +1,4 @@
-import { createSignal, onMount, createEffect, For } from 'solid-js';
+import { createSignal, createEffect, For } from 'solid-js';
 import { supabase } from '../supabaseClient';
 
 function Preferences(props) {
@@ -93,12 +93,10 @@ function Preferences(props) {
   };
 
   createEffect(() => {
-    if (props.isOpen !== undefined && props.isOpen) {
+    if (props.isOpen) {
       fetchPreferences();
     }
   });
-
-  onMount(fetchPreferences);
 
   return (
     <div class="bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-4xl mx-auto">

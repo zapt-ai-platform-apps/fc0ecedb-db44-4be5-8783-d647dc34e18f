@@ -10,7 +10,7 @@ function App() {
   const [user, setUser] = createSignal(null);
   const [currentPage, setCurrentPage] = createSignal('login');
   const [showPreferencesModal, setShowPreferencesModal] = createSignal(false);
-  const [preferencesSet, setPreferencesSet] = createSignal(false);
+  const [preferencesSet, setPreferencesSet] = createSignal(null); // Initialize to null
 
   const checkUserSignedIn = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -99,42 +99,44 @@ function App() {
           </div>
         }
       >
-        <div class="h-full max-w-6xl mx-auto">
-          <div class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-bold">UpGrade</h1>
-            <button
-              class="cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 transition duration-300 ease-in-out transform hover:scale-105"
-              onClick={handleSignOut}
-            >
-              Sign Out
-            </button>
-          </div>
-
+        <Show when={preferencesSet() !== null}>
           <Show when={!preferencesSet()}>
             <Preferences user={user()} setPreferencesSet={setPreferencesSet} />
           </Show>
 
           <Show when={preferencesSet()}>
-            <div class="mb-8">
-              <button
-                class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-6 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300 ease-in-out transform hover:scale-105"
-                onClick={() => setShowPreferencesModal(true)}
-              >
-                Edit Preferences
-              </button>
-              <Exams user={user()} />
-              <Timetable user={user()} />
+            <div class="h-full max-w-6xl mx-auto">
+              <div class="flex justify-between items-center mb-8">
+                <h1 class="text-4xl font-bold">UpGrade</h1>
+                <button
+                  class="cursor-pointer bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 transition duration-300 ease-in-out transform hover:scale-105"
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </button>
+              </div>
+
+              <div class="mb-8">
+                <button
+                  class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-6 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300 ease-in-out transform hover:scale-105"
+                  onClick={() => setShowPreferencesModal(true)}
+                >
+                  Edit Preferences
+                </button>
+                <Exams user={user()} />
+                <Timetable user={user()} />
+              </div>
+              <Show when={showPreferencesModal()}>
+                <Preferences
+                  user={user()}
+                  setPreferencesSet={setPreferencesSet}
+                  onClose={() => setShowPreferencesModal(false)}
+                  isOpen={showPreferencesModal()}
+                />
+              </Show>
             </div>
-            <Show when={showPreferencesModal()}>
-              <Preferences
-                user={user()}
-                setPreferencesSet={setPreferencesSet}
-                onClose={() => setShowPreferencesModal(false)}
-                isOpen={showPreferencesModal()}
-              />
-            </Show>
           </Show>
-        </div>
+        </Show>
       </Show>
     </div>
   );
