@@ -1,8 +1,7 @@
-import { createSignal, onMount, createEffect, Show, For } from 'solid-js';
+import { createSignal, onMount, createEffect, Show } from 'solid-js';
 import { Auth } from '@supabase/auth-ui-solid';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from './supabaseClient';
-import { useNavigate } from '@solidjs/router';
 import Preferences from './components/Preferences';
 import Exams from './components/Exams';
 import Timetable from './components/Timetable';
@@ -10,25 +9,46 @@ import Timetable from './components/Timetable';
 function App() {
   const [user, setUser] = createSignal(null);
   const [currentPage, setCurrentPage] = createSignal('login');
-  const [loading, setLoading] = createSignal(false);
   const [showPreferencesModal, setShowPreferencesModal] = createSignal(false);
-  const navigate = useNavigate();
+  const [preferencesSet, setPreferencesSet] = createSignal(false);
 
   const checkUserSignedIn = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       setUser(user);
       setCurrentPage('homePage');
+      await checkPreferences();
+    }
+  };
+
+  const checkPreferences = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/getPreferences', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPreferencesSet(!!data);
+      } else {
+        setPreferencesSet(false);
+      }
+    } catch (error) {
+      console.error('Error fetching preferences:', error);
+      setPreferencesSet(false);
     }
   };
 
   onMount(checkUserSignedIn);
 
   createEffect(() => {
-    const authListener = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session?.user) {
         setUser(session.user);
         setCurrentPage('homePage');
+        await checkPreferences();
       } else {
         setUser(null);
         setCurrentPage('login');
@@ -36,7 +56,7 @@ function App() {
     });
 
     return () => {
-      authListener.data.unsubscribe();
+      authListener.unsubscribe();
     };
   });
 
@@ -86,11 +106,11 @@ function App() {
             </button>
           </div>
 
-          <Show when={!user().preferencesSet}>
-            <Preferences user={user()} setUser={setUser} />
+          <Show when={!preferencesSet()}>
+            <Preferences user={user()} setPreferencesSet={setPreferencesSet} />
           </Show>
 
-          <Show when={user().preferencesSet}>
+          <Show when={preferencesSet()}>
             <div class="mb-8">
               <button
                 class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-6 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300 ease-in-out transform hover:scale-105"
@@ -104,7 +124,7 @@ function App() {
             <Show when={showPreferencesModal()}>
               <Preferences
                 user={user()}
-                setUser={setUser}
+                setPreferencesSet={setPreferencesSet}
                 onClose={() => setShowPreferencesModal(false)}
               />
             </Show>

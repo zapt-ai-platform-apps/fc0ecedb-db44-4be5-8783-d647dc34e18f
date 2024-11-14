@@ -1,5 +1,5 @@
-import { createSignal } from 'solid-js';
-import { createEvent, supabase } from '../supabaseClient';
+import { createSignal, onMount, For } from 'solid-js';
+import { supabase } from '../supabaseClient';
 
 function Preferences(props) {
   const [availability, setAvailability] = createSignal({
@@ -35,25 +35,63 @@ function Preferences(props) {
   const handleSavePreferences = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('preferences')
-        .upsert({
-          user_id: props.user.id,
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/savePreferences', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           availability: availability(),
           session_duration: sessionDuration(),
           start_date: startDate()
-        });
-
-      if (error) throw error;
-
-      props.setUser({ ...props.user, preferencesSet: true });
-      if (props.onClose) props.onClose();
+        })
+      });
+      if (response.ok) {
+        props.setPreferencesSet(true);
+        if (props.onClose) props.onClose();
+      } else {
+        console.error('Error saving preferences');
+      }
     } catch (error) {
       console.error('Error saving preferences:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchPreferences = async () => {
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/getPreferences', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data) {
+          setAvailability(data.availability);
+          setSessionDuration(data.session_duration);
+          setStartDate(data.start_date);
+          props.setPreferencesSet(true);
+        } else {
+          props.setPreferencesSet(false);
+        }
+      } else {
+        props.setPreferencesSet(false);
+        console.error('Error fetching preferences');
+      }
+    } catch (error) {
+      console.error('Error fetching preferences:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  onMount(fetchPreferences);
 
   return (
     <div class="bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-4xl mx-auto">
