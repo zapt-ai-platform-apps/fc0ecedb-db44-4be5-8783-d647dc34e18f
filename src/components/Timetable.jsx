@@ -27,11 +27,18 @@ function Timetable(props) {
 
       if (!preferencesResponse.ok || !examsResponse.ok) {
         console.error('Error fetching data');
+        setLoading(false);
         return;
       }
 
       const preferences = await preferencesResponse.json();
       const exams = await examsResponse.json();
+
+      if (!preferences.start_date) {
+        console.error('Start date is missing in preferences');
+        setLoading(false);
+        return;
+      }
 
       if (exams.length === 0) {
         console.error('No exams found for timetable');

@@ -29,6 +29,11 @@ export default async function handler(req, res) {
     const sql = neon(process.env.NEON_DB_URL);
     const db = drizzle(sql);
 
+    const startDateValue = new Date(start_date);
+    if (isNaN(startDateValue)) {
+      return res.status(400).json({ error: 'Invalid start date' });
+    }
+
     const existingPreference = await db.select()
       .from(preferences)
       .where(eq(preferences.userId, user.id))
@@ -39,14 +44,14 @@ export default async function handler(req, res) {
       result = await db.update(preferences).set({
         availability,
         sessionDuration: session_duration,
-        startDate: start_date
+        startDate: startDateValue
       }).where(eq(preferences.userId, user.id)).returning();
     } else {
       result = await db.insert(preferences).values({
         userId: user.id,
         availability,
         sessionDuration: session_duration,
-        startDate: start_date
+        startDate: startDateValue
       }).returning();
     }
 

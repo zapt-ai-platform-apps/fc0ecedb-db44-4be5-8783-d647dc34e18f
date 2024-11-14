@@ -1,5 +1,6 @@
 import { createSignal, createEffect, For } from 'solid-js';
 import { supabase } from '../supabaseClient';
+import { format } from 'date-fns';
 
 function Preferences(props) {
   const defaultAvailability = {
@@ -76,7 +77,7 @@ function Preferences(props) {
         if (data && Object.keys(data).length > 0) {
           setAvailability(data.availability || defaultAvailability);
           setSessionDuration(data.session_duration || 60);
-          setStartDate(data.start_date || '');
+          setStartDate(data.start_date ? format(new Date(data.start_date), 'yyyy-MM-dd') : '');
           props.setPreferencesSet(true);
         } else {
           props.setPreferencesSet(false);
