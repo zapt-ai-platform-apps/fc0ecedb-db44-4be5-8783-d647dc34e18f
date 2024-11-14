@@ -1,8 +1,8 @@
-import { createSignal, onMount, For } from 'solid-js';
+import { createSignal, onMount, createEffect, For } from 'solid-js';
 import { supabase } from '../supabaseClient';
 
 function Preferences(props) {
-  const [availability, setAvailability] = createSignal({
+  const defaultAvailability = {
     Monday: [],
     Tuesday: [],
     Wednesday: [],
@@ -10,7 +10,8 @@ function Preferences(props) {
     Friday: [],
     Saturday: [],
     Sunday: []
-  });
+  };
+  const [availability, setAvailability] = createSignal(defaultAvailability);
   const [sessionDuration, setSessionDuration] = createSignal(60);
   const [startDate, setStartDate] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -72,10 +73,10 @@ function Preferences(props) {
       });
       if (response.ok) {
         const data = await response.json();
-        if (data) {
-          setAvailability(data.availability);
-          setSessionDuration(data.session_duration);
-          setStartDate(data.start_date);
+        if (data && Object.keys(data).length > 0) {
+          setAvailability(data.availability || defaultAvailability);
+          setSessionDuration(data.session_duration || 60);
+          setStartDate(data.start_date || '');
           props.setPreferencesSet(true);
         } else {
           props.setPreferencesSet(false);
@@ -90,6 +91,12 @@ function Preferences(props) {
       setLoading(false);
     }
   };
+
+  createEffect(() => {
+    if (props.isOpen !== undefined && props.isOpen) {
+      fetchPreferences();
+    }
+  });
 
   onMount(fetchPreferences);
 

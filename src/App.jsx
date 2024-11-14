@@ -31,7 +31,11 @@ function App() {
       });
       if (response.ok) {
         const data = await response.json();
-        setPreferencesSet(!!data);
+        if (data && Object.keys(data).length > 0) {
+          setPreferencesSet(true);
+        } else {
+          setPreferencesSet(false);
+        }
       } else {
         setPreferencesSet(false);
       }
@@ -126,6 +130,7 @@ function App() {
                 user={user()}
                 setPreferencesSet={setPreferencesSet}
                 onClose={() => setShowPreferencesModal(false)}
+                isOpen={showPreferencesModal()}
               />
             </Show>
           </Show>
