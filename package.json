@@ -19,7 +19,8 @@
     "solid-markdown": "^2.0.13",
     "@solidjs/router": "^0.8.4",
     "@sentry/browser": "^7.67.1",
-    "@sentry/node": "^7.67.1"
+    "@sentry/node": "^7.67.1",
+    "@sentry/tracing": "^7.67.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",

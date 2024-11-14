@@ -1,6 +1,7 @@
 import { createSignal, onMount, For, Show } from 'solid-js';
 import { supabase } from '../supabaseClient';
 import { format, addDays, isBefore, isSameDay } from 'date-fns';
+import * as Sentry from "@sentry/browser";
 
 function Timetable(props) {
   const [timetable, setTimetable] = createSignal([]);
@@ -32,19 +33,26 @@ function Timetable(props) {
       const preferences = await preferencesResponse.json();
       const exams = await examsResponse.json();
 
+      if (exams.length === 0) {
+        console.error('No exams found for timetable');
+        setTimetable([]);
+        setLoading(false);
+        return;
+      }
+
       const availability = preferences.availability;
       const sessionDuration = preferences.session_duration;
       const startDate = new Date(preferences.start_date);
 
       exams.sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
 
-      // Generate timetable
-      const timetableData = [];
-      let currentDate = startDate;
       const endDate = new Date(exams[exams.length - 1].examDate);
 
       const subjects = exams.map(exam => exam.subject);
       let subjectIndex = 0;
+
+      const timetableData = [];
+      let currentDate = startDate;
 
       while (isBefore(currentDate, endDate) || isSameDay(currentDate, endDate)) {
         const dayName = format(currentDate, 'EEEE');
@@ -63,10 +71,11 @@ function Timetable(props) {
             });
             subjectIndex++;
           }
-        } else if (examsOnThisDay.length > 0) {
+        } else if (examsOnThisDay.length > 0 && dayAvailability.length > 0) {
           // Day before exams
           for (let exam of examsOnThisDay) {
-            if (dayAvailability.length > 0) {
+            const previousDay = addDays(new Date(exam.examDate), -1);
+            if (isSameDay(previousDay, currentDate)) {
               sessions.push({
                 time: `${dayAvailability[0]}:00`,
                 subject: exam.subject
@@ -88,6 +97,7 @@ function Timetable(props) {
 
     } catch (error) {
       console.error('Error fetching timetable:', error);
+      Sentry.captureException(error);
     } finally {
       setLoading(false);
     }
