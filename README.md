@@ -137,6 +137,7 @@ UpGrade is an app designed to help students prepare for their school examination
 
 - **Supabase Authentication**: Used for secure user authentication and account management.
 - **Neon Postgres Database**: Stores exam information, user data, and preferences.
+- **Drizzle ORM**: Used for interacting with the Neon Postgres database.
 - **Date-fns**: Handles date formatting and manipulation.
 - **Progressier**: Adds Progressive Web App (PWA) support to the app.
 - **Sentry**: Used for error logging and monitoring.

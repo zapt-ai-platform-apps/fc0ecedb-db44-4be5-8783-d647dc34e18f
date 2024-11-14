@@ -9,38 +9,69 @@ function Timetable(props) {
   const fetchTimetable = async () => {
     setLoading(true);
     try {
-      // Fetch preferences and exams
-      const [{ data: preferences }, { data: exams }] = await Promise.all([
-        supabase.from('preferences').select('*').eq('user_id', props.user.id).single(),
-        supabase.from('exams').select('*').eq('user_id', props.user.id).gte('exam_date', new Date().toISOString())
+      // Fetch preferences and exams via API
+      const { data: { session } } = await supabase.auth.getSession();
+      const [preferencesResponse, examsResponse] = await Promise.all([
+        fetch('/api/getPreferences', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        }),
+        fetch('/api/getExams', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        })
       ]);
+
+      if (!preferencesResponse.ok || !examsResponse.ok) {
+        console.error('Error fetching data');
+        return;
+      }
+
+      const preferences = await preferencesResponse.json();
+      const exams = await examsResponse.json();
 
       const availability = preferences.availability;
       const sessionDuration = preferences.session_duration;
       const startDate = new Date(preferences.start_date);
 
-      exams.sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date));
+      exams.sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
 
       // Generate timetable
       const timetableData = [];
       let currentDate = startDate;
-      const endDate = new Date(exams[exams.length - 1].exam_date);
+      const endDate = new Date(exams[exams.length - 1].examDate);
+
+      const subjects = exams.map(exam => exam.subject);
+      let subjectIndex = 0;
 
       while (isBefore(currentDate, endDate) || isSameDay(currentDate, endDate)) {
         const dayName = format(currentDate, 'EEEE');
-        const dayAvailability = availability[dayName];
+        const dayAvailability = availability[dayName] || [];
         const sessions = [];
 
         // No sessions on exam dates
-        const examsOnThisDay = exams.filter(exam => isSameDay(new Date(exam.exam_date), currentDate));
+        const examsOnThisDay = exams.filter(exam => isSameDay(new Date(exam.examDate), currentDate));
 
         if (examsOnThisDay.length === 0 && dayAvailability.length > 0) {
           // Allocate sessions
           for (let hour of dayAvailability) {
             sessions.push({
               time: `${hour}:00`,
-              subject: '' // Logic to assign subject evenly
+              subject: subjects[subjectIndex % subjects.length]
             });
+            subjectIndex++;
+          }
+        } else if (examsOnThisDay.length > 0) {
+          // Day before exams
+          for (let exam of examsOnThisDay) {
+            if (dayAvailability.length > 0) {
+              sessions.push({
+                time: `${dayAvailability[0]}:00`,
+                subject: exam.subject
+              });
+            }
           }
         }
 
@@ -54,6 +85,7 @@ function Timetable(props) {
       }
 
       setTimetable(timetableData);
+
     } catch (error) {
       console.error('Error fetching timetable:', error);
     } finally {

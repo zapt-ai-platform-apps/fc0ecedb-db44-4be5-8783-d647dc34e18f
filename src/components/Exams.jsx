@@ -15,15 +15,18 @@ function Exams(props) {
   const fetchExams = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('exams')
-        .select('*')
-        .eq('user_id', props.user.id)
-        .gte('exam_date', new Date().toISOString());
-
-      if (error) throw error;
-
-      setExams(data);
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/getExams', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setExams(data);
+      } else {
+        console.error('Error fetching exams:', response.statusText);
+      }
     } catch (error) {
       console.error('Error fetching exams:', error);
     } finally {
@@ -37,32 +40,44 @@ function Exams(props) {
     e.preventDefault();
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const payload = {
         ...newExam(),
-        user_id: props.user.id
+        id: editingExam()
       };
-      let data, error;
+      let response;
       if (editingExam()) {
-        ({ data, error } = await supabase
-          .from('exams')
-          .update(payload)
-          .eq('id', editingExam()));
+        response = await fetch('/api/saveExam', {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
       } else {
-        ({ data, error } = await supabase
-          .from('exams')
-          .insert(payload));
+        response = await fetch('/api/saveExam', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
       }
 
-      if (error) throw error;
-
-      setNewExam({
-        subject: '',
-        exam_date: '',
-        exam_board: '',
-        teacher_name: ''
-      });
-      setEditingExam(null);
-      fetchExams();
+      if (response.ok) {
+        setNewExam({
+          subject: '',
+          exam_date: '',
+          exam_board: '',
+          teacher_name: ''
+        });
+        setEditingExam(null);
+        fetchExams();
+      } else {
+        console.error('Error saving exam:', response.statusText);
+      }
     } catch (error) {
       console.error('Error saving exam:', error);
     } finally {
@@ -71,21 +86,32 @@ function Exams(props) {
   };
 
   const editExam = (exam) => {
-    setNewExam(exam);
+    setNewExam({
+      subject: exam.subject,
+      exam_date: exam.examDate,
+      exam_board: exam.examBoard,
+      teacher_name: exam.teacherName
+    });
     setEditingExam(exam.id);
   };
 
   const deleteExam = async (id) => {
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('exams')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      fetchExams();
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch('/api/deleteExam', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id })
+      });
+      if (response.ok) {
+        fetchExams();
+      } else {
+        console.error('Error deleting exam:', response.statusText);
+      }
     } catch (error) {
       console.error('Error deleting exam:', error);
     } finally {
@@ -160,9 +186,9 @@ function Exams(props) {
             {(exam) => (
               <div class="bg-gray-800 p-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
                 <p class="font-semibold text-lg mb-2">{exam.subject}</p>
-                <p class="text-gray-300">Date: {new Date(exam.exam_date).toLocaleDateString()}</p>
-                <p class="text-gray-300">Board: {exam.exam_board}</p>
-                <p class="text-gray-300">Teacher: {exam.teacher_name}</p>
+                <p class="text-gray-300">Date: {new Date(exam.examDate).toLocaleDateString()}</p>
+                <p class="text-gray-300">Board: {exam.examBoard}</p>
+                <p class="text-gray-300">Teacher: {exam.teacherName}</p>
                 <div class="mt-4 flex space-x-4">
                   <button
                     class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg"
