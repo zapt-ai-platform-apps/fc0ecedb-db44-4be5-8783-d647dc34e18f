@@ -1,5 +1,6 @@
 import { createSignal, onMount, Show, For } from 'solid-js';
 import { supabase } from '../supabaseClient';
+import { parseISO, format } from 'date-fns';
 
 function Exams(props) {
   const [exams, setExams] = createSignal([]);
@@ -186,7 +187,7 @@ function Exams(props) {
             {(exam) => (
               <div class="bg-gray-800 p-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
                 <p class="font-semibold text-lg mb-2">{exam.subject}</p>
-                <p class="text-gray-300">Date: {new Date(exam.examDate).toLocaleDateString()}</p>
+                <p class="text-gray-300">Date: {format(parseISO(exam.examDate), 'dd/MM/yyyy')}</p>
                 <p class="text-gray-300">Board: {exam.examBoard}</p>
                 <p class="text-gray-300">Teacher: {exam.teacherName}</p>
                 <div class="mt-4 flex space-x-4">
