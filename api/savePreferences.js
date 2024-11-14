@@ -4,6 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
 import * as Sentry from "@sentry/node";
+import { parseISO, isValid } from 'date-fns';
 
 Sentry.init({
   dsn: process.env.VITE_PUBLIC_SENTRY_DSN,
@@ -29,8 +30,8 @@ export default async function handler(req, res) {
     const sql = neon(process.env.NEON_DB_URL);
     const db = drizzle(sql);
 
-    const startDateValue = new Date(start_date);
-    if (isNaN(startDateValue)) {
+    const startDateValue = parseISO(start_date);
+    if (!isValid(startDateValue)) {
       return res.status(400).json({ error: 'Invalid start date' });
     }
 
