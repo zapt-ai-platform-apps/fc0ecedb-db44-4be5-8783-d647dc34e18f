@@ -1,6 +1,6 @@
 import { createSignal, onMount, For, Show } from 'solid-js';
 import { supabase } from '../supabaseClient';
-import { format, addDays, isBefore, isSameDay } from 'date-fns';
+import { format, addDays, isBefore, isSameDay, parseISO } from 'date-fns';
 import * as Sentry from "@sentry/browser";
 
 function Timetable(props) {
@@ -42,11 +42,11 @@ function Timetable(props) {
 
       const availability = preferences.availability;
       const sessionDuration = preferences.session_duration;
-      const startDate = new Date(preferences.start_date);
+      const startDate = parseISO(preferences.start_date);
 
-      exams.sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
+      exams.sort((a, b) => parseISO(a.examDate) - parseISO(b.examDate));
 
-      const endDate = new Date(exams[exams.length - 1].examDate);
+      const endDate = parseISO(exams[exams.length - 1].examDate);
 
       const subjects = exams.map(exam => exam.subject);
       let subjectIndex = 0;
@@ -54,13 +54,13 @@ function Timetable(props) {
       const timetableData = [];
       let currentDate = startDate;
 
-      while (isBefore(currentDate, endDate) || isSameDay(currentDate, endDate)) {
+      while (isBefore(currentDate, addDays(endDate, 1))) {
         const dayName = format(currentDate, 'EEEE');
         const dayAvailability = availability[dayName] || [];
         const sessions = [];
 
         // No sessions on exam dates
-        const examsOnThisDay = exams.filter(exam => isSameDay(new Date(exam.examDate), currentDate));
+        const examsOnThisDay = exams.filter(exam => isSameDay(parseISO(exam.examDate), currentDate));
 
         if (examsOnThisDay.length === 0 && dayAvailability.length > 0) {
           // Allocate sessions
@@ -71,11 +71,13 @@ function Timetable(props) {
             });
             subjectIndex++;
           }
-        } else if (examsOnThisDay.length > 0 && dayAvailability.length > 0) {
+        } else if (dayAvailability.length > 0) {
           // Day before exams
-          for (let exam of examsOnThisDay) {
-            const previousDay = addDays(new Date(exam.examDate), -1);
-            if (isSameDay(previousDay, currentDate)) {
+          const nextDay = addDays(currentDate, 1);
+          const examsTomorrow = exams.filter(exam => isSameDay(parseISO(exam.examDate), nextDay));
+
+          if (examsTomorrow.length > 0) {
+            for (let exam of examsTomorrow) {
               sessions.push({
                 time: `${dayAvailability[0]}:00`,
                 subject: exam.subject
@@ -111,7 +113,7 @@ function Timetable(props) {
       <Show when={loading()}>
         <p>Loading Timetable...</p>
       </Show>
-      <Show when={!loading()}>
+      <Show when={!loading() && timetable().length > 0}>
         <div class="space-y-8">
           <For each={timetable()}>
             {(day) => (
@@ -136,6 +138,9 @@ function Timetable(props) {
             )}
           </For>
         </div>
+      </Show>
+      <Show when={!loading() && timetable().length === 0}>
+        <p>No revision sessions scheduled.</p>
       </Show>
     </div>
   );
