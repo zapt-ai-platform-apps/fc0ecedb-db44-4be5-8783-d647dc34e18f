@@ -1,6 +1,6 @@
 import { createSignal, onMount, For, Show } from 'solid-js';
 import { supabase } from '../supabaseClient';
-import { format, addDays, isBefore, isSameDay, parseISO } from 'date-fns';
+import { format, addDays, isBefore, isSameDay, parse } from 'date-fns';
 import * as Sentry from "@sentry/browser";
 
 function Timetable(props) {
@@ -50,11 +50,23 @@ function Timetable(props) {
       const availability = typeof preferences.availability === 'string' ? JSON.parse(preferences.availability) : preferences.availability;
 
       const sessionDuration = preferences.session_duration;
-      const startDate = parseISO(preferences.start_date);
+      const startDate = parse(preferences.start_date, 'yyyy-MM-dd', new Date());
 
-      exams.sort((a, b) => parseISO(a.examDate) - parseISO(b.examDate));
+      // Check if startDate is valid
+      if (isNaN(startDate)) {
+        console.error('Invalid start date:', preferences.start_date);
+        setLoading(false);
+        return;
+      }
 
-      const endDate = parseISO(exams[exams.length - 1].examDate);
+      // Parse and sort exams
+      exams.forEach(exam => {
+        exam.examDateParsed = parse(exam.examDate, 'yyyy-MM-dd', new Date());
+      });
+
+      exams.sort((a, b) => a.examDateParsed - b.examDateParsed);
+
+      const endDate = exams[exams.length - 1].examDateParsed;
 
       const subjects = exams.map(exam => exam.subject);
       let subjectIndex = 0;
@@ -68,7 +80,7 @@ function Timetable(props) {
         const sessions = [];
 
         // No sessions on exam dates
-        const examsOnThisDay = exams.filter(exam => isSameDay(parseISO(exam.examDate), currentDate));
+        const examsOnThisDay = exams.filter(exam => isSameDay(exam.examDateParsed, currentDate));
 
         if (examsOnThisDay.length === 0 && dayAvailability.length > 0) {
           // Allocate sessions
@@ -82,7 +94,7 @@ function Timetable(props) {
         } else if (dayAvailability.length > 0) {
           // Day before exams
           const nextDay = addDays(currentDate, 1);
-          const examsTomorrow = exams.filter(exam => isSameDay(parseISO(exam.examDate), nextDay));
+          const examsTomorrow = exams.filter(exam => isSameDay(exam.examDateParsed, nextDay));
 
           if (examsTomorrow.length > 0) {
             for (let exam of examsTomorrow) {
